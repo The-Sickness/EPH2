@@ -2157,9 +2157,6 @@ void ktoonservative_screen_is_on(bool state, int cpu)
 			{
 				set_core_flag_down(cpuloop, 1);
 				force_cores_down[cpuloop] = 1;
-			if ((hotplug_cpu_lockout[cpuloop] == 2 || tunables->no_extra_cores_screen_off) && !main_cpufreq_control[cpuloop])
-			{
-				set_core_flag_down(cpuloop, 1);
 				need_to_queue_down = true;
 			}
 		}
@@ -2169,7 +2166,6 @@ void ktoonservative_screen_is_on(bool state, int cpu)
 		{
 			queue_work_on(0, dbs_wq, &hotplug_offline_work);
 		}
-			queue_work_on(0, dbs_wq, &hotplug_offline_work);
 
 		boost_the_gpu(tunables->touch_boost_gpu, false);
 		stored_sampling_rate = tunables->sampling_rate;
@@ -2195,8 +2191,6 @@ void ktoonservative_boostpulse(bool boost_for_button)
 	if (!screen_is_on && !boost_for_button)
 		return;
 		
-	struct cpufreq_ktoonservative_tunables *tunables =
-		pcpu->policy->governor_data;
 	if (!boostpulse_relayf)
 	{
 		if (tunables->touch_boost_gpu > 0)  // && screen_is_on
@@ -2273,16 +2267,11 @@ static void __cpuinit hotplug_offline_work_fn(struct work_struct *work)
 
 	for (cpu = CPUS_AVAILABLE-1; cpu > 0; cpu--)
 	{
-		if ((cpu_online(cpu) && (cpu)) || force_cores_down[cpu]) {
+		if (likely(cpu_online(cpu) && (cpu))) {
 			if ((hotplug_cpu_single_down[cpu] && !hotplug_cpu_single_up[cpu] && !main_cpufreq_control[cpu]) || force_cores_down[cpu])
 			{
 				if (debug_is_enabled)
 					pr_alert("BOOST CORES DOWN WORK FUNC %d - %d - %d - %d - %d - %d - %d - %d\n", cpu, hotplug_cpu_single_down[1], hotplug_cpu_single_down[2], hotplug_cpu_single_down[3], hotplug_cpu_single_down[4], hotplug_cpu_single_down[5], hotplug_cpu_single_down[6], hotplug_cpu_single_down[7]);
-		if (likely(cpu_online(cpu) && (cpu))) {
-			if (hotplug_cpu_single_down[cpu] && !hotplug_cpu_single_up[cpu] && !main_cpufreq_control[cpu])
-			{
-				if (debug_is_enabled)
-					pr_alert("BOOST CORES DOWN WORK FUNC %d - %d - %d - %d\n", cpu, hotplug_cpu_single_down[1], hotplug_cpu_single_down[2], hotplug_cpu_single_down[3]);
 				cpu_down(cpu);
 				set_core_flag_down(cpu, 0);
 			}
@@ -2310,12 +2299,6 @@ static void __cpuinit hotplug_online_work_fn(struct work_struct *work)
 					cpu_up(cpu);
 					set_core_flag_up(cpu, 0);
 				}
-			if (hotplug_cpu_single_up[cpu] && !hotplug_cpu_single_down[cpu])
-			{
-				if (debug_is_enabled)
-					pr_alert("BOOST CORES UP WORK FUNC %d - %d - %d - %d - %d - %d - %d - %d\n", cpu, hotplug_cpu_single_up[1], hotplug_cpu_single_up[2], hotplug_cpu_single_up[3], hotplug_cpu_single_up[4], hotplug_cpu_single_up[5], hotplug_cpu_single_up[6], hotplug_cpu_single_up[7]);
-				cpu_up(cpu);
-				set_core_flag_up(cpu, 0);
 			}
 		}
 		if (hotplug_cpu_single_down[cpu])
@@ -2379,31 +2362,30 @@ static inline void dbs_timer_exit(struct cpufreq_ktoonservative_cpuinfo *dbs_inf
 
 static void cpufreq_param_set_init(struct cpufreq_ktoonservative_tunables *tunables)
 {
-	tunables->sampling_rate = 35000;
-	tunables->up_threshold_screen_on = 57;
-	tunables->up_threshold_screen_on_hotplug_1 = 50;
-	tunables->up_threshold_screen_on_hotplug_2 = 55;
-	tunables->up_threshold_screen_on_hotplug_3 = 60;
-	tunables->up_threshold_screen_on_hotplug_4 = 65;
+	tunables->up_threshold_screen_on = 53;
+	tunables->up_threshold_screen_on_hotplug_1 = 43;
+	tunables->up_threshold_screen_on_hotplug_2 = 47;
+	tunables->up_threshold_screen_on_hotplug_3 = 55;
+	tunables->up_threshold_screen_on_hotplug_4 = 62;
 	tunables->up_threshold_screen_on_hotplug_5 = 70;
 	tunables->up_threshold_screen_on_hotplug_6 = 75;
 	tunables->up_threshold_screen_on_hotplug_7 = 80;
 	tunables->up_threshold_screen_off = 57;
-	tunables->up_threshold_screen_off_hotplug_1 = 55;
-	tunables->up_threshold_screen_off_hotplug_2 = 60;
+	tunables->up_threshold_screen_off_hotplug_1 = 50;
+	tunables->up_threshold_screen_off_hotplug_2 = 57;
 	tunables->up_threshold_screen_off_hotplug_3 = 65;
 	tunables->up_threshold_screen_off_hotplug_4 = 70;
 	tunables->up_threshold_screen_off_hotplug_5 = 75;
 	tunables->up_threshold_screen_off_hotplug_6 = 80;
 	tunables->up_threshold_screen_off_hotplug_7 = 85;
 	tunables->down_threshold_screen_on = 52;
-	tunables->down_threshold_screen_on_hotplug_1 = 35;
-	tunables->down_threshold_screen_on_hotplug_2 = 40;
-	tunables->down_threshold_screen_on_hotplug_3 = 45;
-	tunables->down_threshold_screen_on_hotplug_4 = 50;
-	tunables->down_threshold_screen_on_hotplug_5 = 55;
-	tunables->down_threshold_screen_on_hotplug_6 = 60;
-	tunables->down_threshold_screen_on_hotplug_7 = 65;
+	tunables->down_threshold_screen_on_hotplug_1 = 43;
+	tunables->down_threshold_screen_on_hotplug_2 = 47;
+	tunables->down_threshold_screen_on_hotplug_3 = 55;
+	tunables->down_threshold_screen_on_hotplug_4 = 60;
+	tunables->down_threshold_screen_on_hotplug_5 = 62;
+	tunables->down_threshold_screen_on_hotplug_6 = 65;
+	tunables->down_threshold_screen_on_hotplug_7 = 70;
 	tunables->down_threshold_screen_off = 52;
 	tunables->down_threshold_screen_off_hotplug_1 = 40;
 	tunables->down_threshold_screen_off_hotplug_2 = 45;
@@ -2412,12 +2394,12 @@ static void cpufreq_param_set_init(struct cpufreq_ktoonservative_tunables *tunab
 	tunables->down_threshold_screen_off_hotplug_5 = 60;
 	tunables->down_threshold_screen_off_hotplug_6 = 65;
 	tunables->down_threshold_screen_off_hotplug_7 = 70;
-	tunables->block_cycles_online_screen_on = 3;
-	tunables->block_cycles_offline_screen_on = 11;
-	tunables->block_cycles_raise_screen_on = 3;
-	tunables->block_cycles_online_screen_off = 11;
+	tunables->block_cycles_online_screen_on = 2;
+	tunables->block_cycles_offline_screen_on = 10;
+	tunables->block_cycles_raise_screen_on = 2;
+	tunables->block_cycles_online_screen_off = 8;
 	tunables->block_cycles_offline_screen_off =1;
-	tunables->block_cycles_raise_screen_off = 11;
+	tunables->block_cycles_raise_screen_off = 10;
 	tunables->super_conservative_screen_on = 0;
 	tunables->super_conservative_screen_off = 0;
 	tunables->touch_boost_cpu_cl0 = DEF_BOOST_CPU_CL0;
@@ -2468,12 +2450,12 @@ static void cpufreq_param_set_init(struct cpufreq_ktoonservative_tunables *tunab
 	tunables->disable_hotplug_bt = 0;
 	tunables->no_extra_cores_screen_off = 1;
 	tunables->sampling_rate_min = 20000;
-	tunables->sampling_rate = 35000;
+	tunables->sampling_rate = 45000;
 	tunables->sampling_rate_screen_off = 40000;
 	tunables->ignore_nice_load = 0;
 	tunables->freq_step_raise_screen_on = 5;
-	tunables->freq_step_raise_screen_off = 1;
-	tunables->freq_step_lower_screen_on = 2;
+	tunables->freq_step_raise_screen_off = 2;
+	tunables->freq_step_lower_screen_on = 4;
 	tunables->freq_step_lower_screen_off = 8;
 	tunables->debug_enabled = 0;
 }
@@ -2856,7 +2838,6 @@ struct cpufreq_governor cpufreq_gov_ktoonservative = {
 static int __init cpufreq_gov_dbs_init(void)
 {
 	dbs_wq = alloc_workqueue("ktoonservative_dbs_wq", WQ_HIGHPRI | WQ_UNBOUND, 0);
-	dbs_wq = alloc_workqueue("ktoonservative_dbs_wq", WQ_HIGHPRI | WQ_CPU_INTENSIVE, 0);
 	if (!dbs_wq) {
 		printk(KERN_ERR "Failed to create ktoonservative_dbs_wq workqueue\n");
 		return -EFAULT;
